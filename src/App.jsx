@@ -1,55 +1,126 @@
-import { useState } from "react";
-import "./App.css"
+import { useEffect, useState } from "react";
+import { FiMail, FiPhone, FiGlobe, FiHeart, FiEdit } from 'react-icons/fi'; 
+import { FaTrash } from "react-icons/fa";
+import "./App.css" 
 
-const faqs = [
-  {
-    title: "Where are these chairs assembled?",
-    text: "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Accusantium, quaerat temporibus quas dolore provident nisi ut aliquid ratione beatae sequi aspernatur veniam repellendus.",
-  },
-  {
-    title: "How long do I have to return my chair?",
-    text: "Pariatur recusandae dignissimos fuga voluptas unde optio nesciunt commodi beatae, explicabo natus.",
-  },
-  {
-    title: "Do you ship to countries outside the EU?",
-    text: "Excepturi velit laborum, perspiciatis nemo perferendis reiciendis aliquam possimus dolor sed! Dolore laborum ducimus veritatis facere molestias!",
-  },
-];
 
- function App() {
-  return (
-    <div>
-      <Accordion data={faqs} />
-    </div>
-  );
-}
+const App = () => {
+    const [users, setUsers] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [editMode, setEditMode] = useState(false);
+    const [editedUser, setEditedUser] = useState({});
 
-function Accordion({ data }) {
-  return (
-    <div className="accordion">
-      {data.map((el, i) => (
-        <AccordionItem title={el.title} text={el.text} num={i} key={el.title} />
-      ))}
-    </div>
-  );
-}
+    async function getUsersDetails() {
+        try {
+            const res = await fetch('https://joaosilgo.github.io/dummy_db/users.json');
+            if (!res.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            const data = await res.json();
+            setUsers(data);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
+    }
 
-function AccordionItem({ num, title, text }) {
-  const [isOpen, setIsOpen] = useState(false);
+    useEffect(() => {
+        getUsersDetails();
+    }, []);
 
-  function handleToggle() {
-    setIsOpen((isOpen) => !isOpen);
-  }
+    const handleHeartClick = (id) => {
+        const updatedUsers = users.map(user => {
+            if (user.id === id) {
+                return { ...user, liked: !user.liked };
+            }
+            return user;
+        });
+        setUsers(updatedUsers);
+    };
 
-  return (
-    <div className={`item ${isOpen ? "open" : ""}`} onClick={handleToggle}>
-      <p className="number">{num < 9 ? `0${num + 1}` : num + 1}</p>
-      <p className="title">{title}</p>
-      <p className="icon">{isOpen ? "-" : "+"}</p>
+    const handleEditClick = (user) => {
+        setSelectedUser(user);
+        setEditMode(true);
+        setEditedUser(user);
+    };
 
-      {isOpen && <div className="content-box">{text}</div>}
-    </div>
-  );
-}
+    const handleDeleteClick = (id) => {
+        const updatedUsers = users.filter(user => user.id !== id);
+        setUsers(updatedUsers);
+    };
 
-export default App
+    const handleSaveEdit = () => {
+        const updatedUsers = users.map(user => {
+            if (user.id === editedUser.id) {
+                return editedUser;
+            }
+            return user;
+        });
+        setUsers(updatedUsers);
+        setEditMode(false);
+    };
+
+    const handleCancelEdit = () => {
+        setEditMode(false);
+        setEditedUser({});
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setEditedUser(prevUser => ({
+            ...prevUser,
+            [name]: value
+        }));
+    };
+
+    return (
+        <div className="user-grid">
+            {users.map((user) => (
+                <div key={user.id} className="user-box">
+                    <h2>{user.name}</h2>
+                    <p><FiMail />  {user.email}</p>
+                    <p><FiPhone />  {user.phone}</p>
+                    <p><FiGlobe />  {user.website}</p>
+                    <hr/>
+                    <div style={{display:"flex",alignItems:"center", justifyContent:"space-around", cursor:"pointer", onMouseHover:"blue"}} className="button-container">
+                        <div onClick={() => handleHeartClick(user.id)}><FiHeart fill={user.liked ? 'red' : 'none'} stroke="red" size={20} /></div> 
+                        <div onClick={() => handleEditClick(user)} className="edit-button"><FiEdit size={20}/></div>
+                        <div onClick={() => handleDeleteClick(user.id)} className="delete-button"><FaTrash fill={'grey'} size={20}/></div>
+                    </div>
+                </div>
+            ))}
+            {editMode && selectedUser && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <h2>Basic Modal</h2>
+                        <span style={{cursor:"pointer"}} fontSize={"40px"} onClick={handleCancelEdit}>&times;</span>
+                        </div>
+                        <hr style={{marginBottom:"30px"}}/>
+                        <div className="form-group">
+                            <label><span className="required-field"> Name:</span></label>
+                            <input type="text" name="name" value={editedUser.name} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label><span className="required-field"> Email:</span></label>
+                            <input type="text" name="email" value={editedUser.email} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label><span className="required-field"> Phone:</span></label>
+                            <input type="text" name="phone" value={editedUser.phone} onChange={handleChange} />
+                        </div>
+                        <div className="form-group">
+                            <label><span className="required-field"> Website:</span></label>
+                            <input type="text" name="website" value={editedUser.website} onChange={handleChange} />
+                        </div>
+                        <div className="modal-buttons">
+                            <button  onClick={handleCancelEdit}>Cancel</button>
+                            <button onClick={handleSaveEdit}>OK</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default App;
